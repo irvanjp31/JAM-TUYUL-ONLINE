@@ -1,0 +1,199 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Jam Dunia Pro - YouTube Creator Edition</title>
+    <style>
+        :root {
+            --bg-color: #0c0c0c;
+            --card-bg: #161616;
+            --text-color: #ffffff;
+            --text-secondary: #7e7e7e;
+            --accent-color: #52c41a;
+        }
+        body { margin: 0; padding: 0; font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif; background-color: var(--bg-color); color: var(--text-color); }
+        .container { max-width: 600px; margin: 0 auto; padding: 20px; padding-bottom: 100px; }
+        .header-title { text-align: center; font-size: 20px; margin: 10px 0; font-weight: normal; }
+        .custom-panel { display: flex; justify-content: space-between; align-items: center; background: rgba(255,255,255,0.05); padding: 8px 15px; border-radius: 10px; font-size: 13px; }
+        .custom-panel div { display: flex; align-items: center; gap: 8px; }
+        select, input[type="color"] { background: #222; color: #fff; border: 1px solid #444; padding: 4px 8px; border-radius: 5px; outline: none; }
+        .clock-list { display: flex; flex-direction: column; margin-top: 15px; }
+        .clock-row { display: flex; justify-content: space-between; align-items: center; padding: 16px 10px; border-bottom: 1px solid rgba(255,255,255,0.05); }
+        .left-side { display: flex; flex-direction: column; gap: 5px; }
+        .name-flag-container { display: flex; align-items: center; gap: 8px; }
+        .city-name { font-size: 17px; font-weight: 500; }
+        .country-name { color: var(--text-secondary); font-size: 13px; font-weight: normal; }
+        .flag-icon { width: 22px; height: 14px; object-fit: cover; border-radius: 2px; }
+        .gmt-info { font-size: 12px; color: var(--text-secondary); }
+        .right-side { display: flex; align-items: center; gap: 12px; }
+        .time-date-container { display: flex; flex-direction: column; align-items: flex-end; gap: 4px; }
+        .time-display { font-size: 26px; font-weight: bold; font-family: monospace; }
+        .date-display { font-size: 12px; color: var(--text-secondary); }
+        .day-status { font-weight: bold; font-size: 11px; padding: 1px 4px; border-radius: 3px; background: rgba(255,255,255,0.1); margin-left: 4px; }
+        .btn-delete { background: none; border: none; color: #ff4d4d; cursor: pointer; font-size: 16px; opacity: 0.4; }
+        .fab-btn { position: fixed; bottom: 30px; left: 50%; transform: translateX(-50%); width: 56px; height: 56px; background-color: var(--accent-color); border-radius: 50%; display: flex; justify-content: center; align-items: center; box-shadow: 0 4px 12px rgba(0,0,0,0.5); border: none; color: #fff; font-size: 32px; cursor: pointer; }
+        .modal { display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.8); z-index: 100; justify-content: center; align-items: center; }
+        .modal-content { background: #1e1e1e; width: 90%; max-width: 450px; height: 65vh; border-radius: 15px; display: flex; flex-direction: column; padding: 20px; box-sizing: border-box; }
+        .search-input { width: 100%; padding: 12px; background: #2d2d2d; border: 1px solid #444; color: #fff; border-radius: 8px; box-sizing: border-box; margin-bottom: 15px; font-size: 16px; outline: none; }
+        .country-list { flex-grow: 1; overflow-y: auto; display: flex; flex-direction: column; gap: 6px; }
+        .country-item { display: flex; justify-content: space-between; align-items: center; padding: 12px; background: #252525; border-radius: 8px; cursor: pointer; }
+    </style>
+</head>
+<body>
+
+<div class="container">
+    <header>
+        <div class="header-title">jam dunia</div>
+        <div class="custom-panel">
+            <div>Tema:
+                <select id="themeSelect" onchange="changeTheme(this.value)">
+                    <option value="dark">Gelap</option>
+                    <option value="amoled">AMOLED Hitam</option>
+                    <option value="light">Terang</option>
+                </select>
+            </div>
+            <div>Warna Jam: <input type="color" id="clockColor" value="#ffffff" onchange="changeClockColor(this.value)"></div>
+        </div>
+    </header>
+    <div class="clock-list" id="mainList"></div>
+</div>
+
+<button class="fab-btn" onclick="openModal()">+</button>
+
+<div class="modal" id="searchModal">
+    <div class="modal-content">
+        <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:15px;">
+            <h3 style="margin:0; font-weight: normal;">Cari Pasar Premium</h3>
+            <button style="background:none; border:none; color:#fff; font-size:24px; cursor:pointer;" onclick="closeModal()">&times;</button>
+        </div>
+        <input type="text" class="search-input" id="searchInput" placeholder="Ketik negara atau kota..." oninput="filterCountries()">
+        <div class="country-list" id="modalList"></div>
+    </div>
+</div>
+
+<script>
+    // Database Pasar Premium CPM Tinggi
+    const premiumDatabase = [
+        { name: 'New York', info: 'Amerika Serikat (USA)', zone: 'America/New_York', flag: 'us' },
+        { name: 'Los Angeles', info: 'Amerika Serikat (USA)', zone: 'America/Los_Angeles', flag: 'us' },
+        { name: 'London', info: 'Inggris (UK)', zone: 'Europe/London', flag: 'gb' },
+        { name: 'Berlin', info: 'Jerman', zone: 'Europe/Berlin', flag: 'de' },
+        { name: 'Paris', info: 'Prancis', zone: 'Europe/Paris', flag: 'fr' },
+        { name: 'Madrid', info: 'Spanyol', zone: 'Europe/Madrid', flag: 'es' },
+        { name: 'Amsterdam', info: 'Belanda', zone: 'Europe/Amsterdam', flag: 'nl' },
+        { name: 'Rome', info: 'Italia', zone: 'Europe/Rome', flag: 'it' },
+        { name: 'Toronto', info: 'Kanada', zone: 'America/Toronto', flag: 'ca' },
+        { name: 'Sydney', info: 'Australia', zone: 'Australia/Sydney', flag: 'au' },
+        { name: 'Singapore', info: 'Singapura', zone: 'Asia/Singapore', flag: 'sg' },
+        { name: 'Tokyo', info: 'Jepang', zone: 'Asia/Tokyo', flag: 'jp' },
+        { name: 'Seoul', info: 'Korea Selatan', zone: 'Asia/Seoul', flag: 'kr' },
+        { name: 'Riyadh / Makkah', info: 'Arab Saudi', zone: 'Asia/Riyadh', flag: 'sa' },
+        { name: 'Dubai', info: 'Uni Emirat Arab (UEA)', zone: 'Asia/Dubai', flag: 'ae' },
+        { name: 'Jakarta', info: 'Indonesia (WIB)', zone: 'Asia/Jakarta', flag: 'id' }
+    ].sort((a,b) => a.info.localeCompare(b.info));
+
+    const defaultSelection = ['Jakarta', 'New York', 'London', 'Madrid'];
+    let userClocks = JSON.parse(localStorage.getItem('premiumWorldClocksV3')) || defaultSelection;
+    let preferredColor = localStorage.getItem('premiumClockColorV3') || '#ffffff';
+
+    function renderMainList() {
+        const container = document.getElementById('mainList'); container.innerHTML = '';
+        if(userClocks.length === 0) { container.innerHTML = `<div style="padding:40px; text-align:center; color:var(--text-secondary)">Klik + untuk menambah jam pantauan.</div>`; return; }
+        
+        userClocks.forEach((cityName, index) => {
+            const data = premiumDatabase.find(c => c.name === cityName);
+            if (!data) return;
+            const row = document.createElement('div');
+            row.className = 'clock-row';
+            row.innerHTML = `
+                <div class="left-side">
+                    <div class="name-flag-container">
+                        <span class="city-name">${data.name}, <span class="country-name">${data.info.split(' (')[0]}</span></span>
+                        <img class="flag-icon" src="https://flagcdn.com/w40/${data.flag}.png">
+                    </div>
+                    <span class="gmt-info" id="gmt-${index}">Menghitung...</span>
+                </div>
+                <div class="right-side">
+                    <div class="time-date-container">
+                        <span class="time-display" id="time-${index}" style="color:${preferredColor}">00:00:00</span>
+                        <span class="date-display"><span id="date-${index}">-</span><span id="day-status-${index}" class="day-status"></span></span>
+                    </div>
+                    <button class="btn-delete" onclick="removeClock('${data.name}')">🗑️</button>
+                </div>`;
+            container.appendChild(row);
+        });
+        updateClocks();
+    }
+
+    function updateClocks() {
+        const now = new Date(); const localOffset = -now.getTimezoneOffset() / 60;
+        
+        // Buat acuan tanggal murni HP lokal (menghilangkan jam/menit/detik)
+        const localDateString = now.toLocaleDateString('en-US');
+        const midnightLocal = new Date(localDateString);
+
+        userClocks.forEach((cityName, index) => {
+            const data = premiumDatabase.find(c => c.name === cityName);
+            if (!data) return;
+            try {
+                // Tampilkan Jam dan Menit
+                document.getElementById(`time-${index}`).textContent = now.toLocaleTimeString('id-ID', { timeZone: data.zone, hour12: false });
+                
+                // Tampilkan Tanggal murni
+                document.getElementById(`date-${index}`).textContent = now.toLocaleDateString('id-ID', { timeZone: data.zone, weekday: 'long', day: '2-digit', month: '2-digit' });
+                
+                // LOGIKA DETEKSI HARI (Hari ini / Besok / Kemarin)
+                const targetDateString = now.toLocaleDateString('en-US', { timeZone: data.zone });
+                const midnightTarget = new Date(targetDateString);
+                
+                const timeDiff = midnightTarget.getTime() - midnightLocal.getTime();
+                const dayDiff = Math.round(timeDiff / (1000 * 60 * 60 * 24));
+
+                let dayStatusText = "Hari ini";
+                if (dayDiff > 0) dayStatusText = "Besok";
+                if (dayDiff < 0) dayStatusText = "Kemarin";
+                
+                const statusEl = document.getElementById(`day-status-${index}`);
+                statusEl.textContent = dayStatusText;
+                statusEl.style.color = dayStatusText === 'Hari ini' ? 'var(--text-secondary)' : (dayStatusText === 'Besok' ? '#52c41a' : '#ff4d4d');
+
+                // Tarik Nilai GMT Offset
+                const parts = new Intl.DateTimeFormat('en-US', { timeZone: data.zone, timeZoneName: 'longOffset' }).formatToParts(now);
+                const gmtString = parts.find(p => p.type === 'timeZoneName').value;
+                const match = gmtString.match(/([+-]\d+):/);
+                let targetGMT = match ? parseInt(match[1]) : 0;
+                let diff = targetGMT - localOffset;
+                let diffText = diff === 0 ? "waktu sama" : (diff > 0 ? `${diff} jam depan` : `${Math.abs(diff)} jam belakang`);
+                document.getElementById(`gmt-${index}`).textContent = `${gmtString.replace(':', ':00')} (${diffText})`;
+            } catch(e){}
+        });
+    }
+
+    function openModal() { document.getElementById('searchModal').style.display = 'flex'; filterCountries(); }
+    function closeModal() { document.getElementById('searchModal').style.display = 'none'; document.getElementById('searchInput').value = ''; }
+
+    function filterCountries() {
+        const query = document.getElementById('searchInput').value.toLowerCase().trim();
+        const container = document.getElementById('modalList'); container.innerHTML = '';
+        const filtered = premiumDatabase.filter(c => c.name.toLowerCase().includes(query) || c.info.toLowerCase().includes(query));
+
+        filtered.forEach(country => {
+            const isExist = userClocks.includes(country.name);
+            const item = document.createElement('div'); item.className = 'country-item';
+            item.innerHTML = `<div class="name-flag-container"><span><strong>${country.name}</strong> <small style="color:#777">(${country.info})</small></span><img class="flag-icon" src="https://flagcdn.com/w40/${country.flag}.png"></div>
+                              <span style="color:${isExist ? '#555' : 'var(--accent-color)'}">${isExist ? 'Aktif' : '➕'}</span>`;
+            if(!isExist) { item.onclick = () => { userClocks.push(country.name); localStorage.setItem('premiumWorldClocksV3', JSON.stringify(userClocks)); renderMainList(); closeModal(); }; }
+            container.appendChild(item);
+        });
+    }
+
+    function removeClock(name) { userClocks = userClocks.filter(c => c !== name); localStorage.setItem('premiumWorldClocksV3', JSON.stringify(userClocks)); renderMainList(); }
+    function changeTheme(t) { document.documentElement.style.setProperty('--bg-color', t==='light'?'#f9f9f9':(t==='amoled'?'#000':'#0c0c0c')); document.documentElement.style.setProperty('--text-color', t==='light'?'#111':'#fff'); }
+    function changeClockColor(c) { preferredColor = c; localStorage.setItem('premiumClockColorV3', c); document.querySelectorAll('.time-display').forEach(el => el.style.color = c); }
+
+    document.getElementById('clockColor').value = preferredColor;
+    renderMainList(); setInterval(updateClocks, 1000);
+</script>
+</body>
+</html>
